@@ -40,7 +40,7 @@ Steps
 
 # Screenshots
 	Custom Camera UI (Zoom & Tap-to-Focus)
-		![My Image](https://drive.google.com/file/d/1lK9442NsNfuJB-hmIm4a0wfyo7EVbF7C/view?usp=sharing)
+https://drive.google.com/file/d/1lK9442NsNfuJB-hmIm4a0wfyo7EVbF7C/view?usp=sharing
 	Upload Manager (Sync Engine Queue)
 		![My Image](https://drive.google.com/file/d/1TEcTuRhUM_0fkR1k-oHEfxziA4lEmCnm/view?usp=sharing)
 		![My Image](https://drive.google.com/file/d/1Mc-1jAfOR96cBIgukizwDUouQ86Z7fd4/view?usp=drive_link)
