@@ -10,9 +10,12 @@ import androidx.compose.material3.Text
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.location.Location
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -24,17 +27,23 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddCircleOutline
+import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Refresh
 
 import androidx.compose.runtime.collectAsState
 
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -47,6 +56,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 
 import androidx.compose.runtime.Composable
@@ -59,11 +69,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PaintingStyle.Companion.Stroke
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 
 import androidx.compose.ui.platform.LocalContext
 
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -74,6 +91,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 
 import com.shakhawat.geoattendance.data.AttendanceRepositoryImpl
 import com.shakhawat.geoattendance.data.LocationDataSource
+import com.shakhawat.geoattendance.domain.model.OfficeLocation
 
 import com.shakhawat.geoattendance.presentation.AttendanceViewModel
 import com.shakhawat.geoattendance.presentation.AttendanceViewModelFactory
@@ -135,412 +153,144 @@ private fun AttendanceTheme(content: @Composable () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AttendanceScreen(
-    viewModel: AttendanceViewModel
-) {
-
-    val context =
-        LocalContext.current
+fun AttendanceScreen(viewModel: AttendanceViewModel) {
+    val context = LocalContext.current
 
     var hasPermission by remember {
-
         mutableStateOf(
-
             ContextCompat.checkSelfPermission(
-
                 context,
-
                 Manifest.permission.ACCESS_FINE_LOCATION
-
             ) == PackageManager.PERMISSION_GRANTED
         )
     }
 
     val permissionLauncher =
         rememberLauncherForActivityResult(
-
-            ActivityResultContracts
-                .RequestMultiplePermissions()
-
+            ActivityResultContracts.RequestMultiplePermissions()
         ) { result ->
-
             hasPermission =
-
-                result[
-                    Manifest.permission.ACCESS_FINE_LOCATION
-                ] == true ||
-
-                        result[
-                            Manifest.permission.ACCESS_COARSE_LOCATION
-                        ] == true
+                result[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                        result[Manifest.permission.ACCESS_COARSE_LOCATION] == true
         }
 
     LaunchedEffect(hasPermission) {
-
         if (!hasPermission) {
-
             permissionLauncher.launch(
-
                 arrayOf(
-
                     Manifest.permission.ACCESS_FINE_LOCATION,
-
                     Manifest.permission.ACCESS_COARSE_LOCATION
                 )
             )
-
         } else {
-
             viewModel.startTracking()
         }
     }
 
-    val state by
-    viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsState()
 
-    val withinRadius =
-        state.isWithinRadius &&
-                state.officeLocation != null
+    val withinRadius = state.isWithinRadius && state.officeLocation != null
 
     Scaffold(
-
-        containerColor =
-            MaterialTheme.colorScheme.background,
-
+        containerColor = Color(0xFFF8FAFC),
         topBar = {
-
-            CenterAlignedTopAppBar(
-
+            TopAppBar(
                 title = {
-
-                    Column {
-
-                        Text(
-
-                            "Attendance",
-
-                            fontSize = 21.sp,
-
-                            fontWeight =
-                                FontWeight.Bold
-                        )
-
-                        Text(
-
-                            "Geo-fenced check-in",
-
-                            fontSize = 12.sp,
-
-                            color =
-                                MaterialTheme
-                                    .colorScheme
-                                    .onSurface
-                                    .copy(
-                                        alpha = .55f
-                                    )
-                        )
-                    }
+                    Text(
+                        text = "Attendance",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF1E293B)
+                    )
                 },
-
-                actions = {
-
-                    IconButton(
-                        onClick = {
-                            viewModel.startTracking()
-                        }
-                    ) {
-
+                navigationIcon = {
+                    IconButton(onClick = { /* Handle back navigation */ }) {
                         Icon(
-                            Icons.Default.Refresh,
-                            contentDescription =
-                                "Refresh"
+                            imageVector = Icons.Default.ArrowBackIosNew,
+                            contentDescription = "Back",
+                            tint = Color(0xFF1E293B)
                         )
                     }
                 },
-
-                colors =
-                    TopAppBarDefaults
-                        .topAppBarColors(
-
-                            containerColor =
-                                MaterialTheme
-                                    .colorScheme
-                                    .background
+                actions = {
+                    IconButton(onClick = { viewModel.startTracking() }) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Refresh",
+                            tint = Color(0xFF1E293B)
                         )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.White
+                )
             )
         }
-
     ) { padding ->
-
         Column(
-
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(
-                        horizontal = 20.dp
-                    ),
-
-            verticalArrangement =
-                Arrangement.spacedBy(16.dp)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(horizontal = 16.dp)
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
+            Spacer(modifier = Modifier.height(4.dp))
 
-            Spacer(
-                Modifier.height(4.dp)
-            )
-
-            LocationStatusCard(
-
-                distanceMeters =
-                    state.distanceMeters,
-
-                officeConfigured =
-                    state.officeLocation != null,
-
-                withinRadius =
-                    withinRadius
-            )
-
+            // STEP 1: Office Context Card
             OfficeLocationCard(
-
-                configured =
-                    state.officeLocation != null,
-
-                loading =
-                    state.isLoading,
-
-                onSetLocation =
-                    viewModel::setOfficeLocation
+                configured = state.officeLocation != null,
+                loading = state.isLoading,
+                officeLocation = state.officeLocation,
+                onSetLocation = viewModel::setOfficeLocation
             )
 
+            // STEP 2: Distance Gauge Section
+            LocationStatusSection(
+                distanceMeters = state.distanceMeters,
+                withinRadius = withinRadius
+            )
+
+            // STEP 3: Action Card
             AttendanceActionCard(
-
-                enabled =
-                    withinRadius,
-
-                hasPermission =
-                    hasPermission,
-
-                onMark =
-                    viewModel::markAttendance
+                enabled = withinRadius,
+                hasPermission = hasPermission,
+                onMark = viewModel::markAttendance
             )
 
+            // Last Attendance Card
             state.lastAttendanceMillis?.let {
-
                 LastAttendanceCard(it)
             }
 
-            state.message?.let {
-
+            // Status Message Snackbar-like banner
+            state.message?.let { msg ->
                 Surface(
-
-                    modifier =
-                        Modifier.fillMaxWidth(),
-
-                    shape =
-                        RoundedCornerShape(14.dp),
-
-                    color =
-                        MaterialTheme
-                            .colorScheme
-                            .primaryContainer
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFFEFF6FF)
                 ) {
-
                     Row(
-
-                        modifier =
-                            Modifier.padding(14.dp),
-
-                        verticalAlignment =
-                            Alignment.CenterVertically
+                        modifier = Modifier.padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-
                         Icon(
-
                             Icons.Default.CheckCircle,
-
-                            contentDescription =
-                                null,
-
-                            tint =
-                                MaterialTheme
-                                    .colorScheme
-                                    .primary
+                            contentDescription = null,
+                            tint = Color(0xFF2563EB)
                         )
-
-                        Spacer(
-                            Modifier.width(10.dp)
-                        )
-
+                        Spacer(Modifier.width(10.dp))
                         Text(
-
-                            it,
-
-                            fontSize = 13.sp
+                            text = msg,
+                            fontSize = 13.sp,
+                            color = Color(0xFF1E293B)
                         )
                     }
                 }
             }
-        }
-    }
-}
 
-@Composable
-private fun LocationStatusCard(
-    distanceMeters: Float?,
-    officeConfigured: Boolean,
-    withinRadius: Boolean
-) {
-
-    val distanceText =
-        distanceMeters?.let {
-
-            if (it < 1000) {
-
-                "${it.toInt()} m"
-
-            } else {
-
-                String.format(
-                    "%.2f km",
-                    it / 1000f
-                )
-            }
-
-        } ?: "--"
-
-    val statusText =
-        when {
-
-            !officeConfigured ->
-                "Office location not set"
-
-            withinRadius ->
-                "You are inside the attendance zone"
-
-            else ->
-                "Move closer to the office"
-        }
-
-    Card(
-
-        modifier =
-            Modifier.fillMaxWidth(),
-
-        shape =
-            RoundedCornerShape(24.dp),
-
-        colors =
-            CardDefaults.cardColors(
-
-                containerColor =
-                    MaterialTheme
-                        .colorScheme
-                        .primary
-            )
-    ) {
-
-        Column(
-
-            modifier =
-                Modifier.padding(22.dp),
-
-            horizontalAlignment =
-                Alignment.CenterHorizontally
-        ) {
-
-            Box(
-
-                modifier =
-                    Modifier
-                        .size(66.dp)
-                        .clip(CircleShape)
-                        .background(
-                            Color.White.copy(
-                                alpha = .16f
-                            )
-                        ),
-
-                contentAlignment =
-                    Alignment.Center
-            ) {
-
-                Icon(
-
-                    Icons.Default.LocationOn,
-
-                    contentDescription =
-                        null,
-
-                    tint = Color.White,
-
-                    modifier =
-                        Modifier.size(34.dp)
-                )
-            }
-
-            Spacer(
-                Modifier.height(12.dp)
-            )
-
-            Text(
-
-                distanceText,
-
-                color = Color.White,
-
-                fontSize = 36.sp,
-
-                fontWeight =
-                    FontWeight.Bold
-            )
-
-            Text(
-
-                "distance from office",
-
-                color =
-                    Color.White.copy(
-                        alpha = .78f
-                    ),
-
-                fontSize = 12.sp
-            )
-
-            Spacer(
-                Modifier.height(14.dp)
-            )
-
-            Surface(
-
-                shape =
-                    RoundedCornerShape(50),
-
-                color =
-                    Color.White.copy(
-                        alpha = .15f
-                    )
-            ) {
-
-                Text(
-
-                    statusText,
-
-                    modifier =
-                        Modifier.padding(
-                            horizontal = 14.dp,
-                            vertical = 8.dp
-                        ),
-
-                    color = Color.White,
-
-                    fontSize = 12.sp,
-
-                    fontWeight =
-                        FontWeight.Medium
-                )
-            }
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
@@ -549,176 +299,205 @@ private fun LocationStatusCard(
 private fun OfficeLocationCard(
     configured: Boolean,
     loading: Boolean,
+    officeLocation: OfficeLocation?, // Replace with your Location data type if different
     onSetLocation: () -> Unit
 ) {
-
     Card(
-
-        modifier =
-            Modifier.fillMaxWidth(),
-
-        shape =
-            RoundedCornerShape(20.dp),
-
-        colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    MaterialTheme
-                        .colorScheme
-                        .surface
-            )
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        modifier = Modifier.fillMaxWidth()
     ) {
-
         Column(
-            Modifier.padding(18.dp)
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-
             Row(
-                verticalAlignment =
-                    Alignment.CenterVertically
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                Text(
+                    text = "STEP 1: OFFICE CONTEXT",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF64748B),
+                    letterSpacing = 0.5.sp
+                )
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .background(Color(0xFF2563EB), CircleShape)
+                )
+            }
 
+            // Map Container Box
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(130.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFFE2E8F0)),
+                contentAlignment = Alignment.Center
+            ) {
                 Surface(
-
-                    modifier =
-                        Modifier.size(44.dp),
-
-                    shape =
-                        RoundedCornerShape(14.dp),
-
-                    color =
-                        MaterialTheme
-                            .colorScheme
-                            .primaryContainer
+                    shape = RoundedCornerShape(20.dp),
+                    color = Color.White,
+                    shadowElevation = 2.dp
                 ) {
-
-                    Box(
-                        contentAlignment =
-                            Alignment.Center
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-
                         Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = null,
+                            tint = Color(0xFF2563EB),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        val latStr = officeLocation?.latitude?.let { String.format("%.4f", it) } ?: "40.7128"
+                        val lonStr = officeLocation?.longitude?.let { String.format("%.4f", it) } ?: "-74.0060"
 
-                            Icons.Default.MyLocation,
-
-                            contentDescription =
-                                null,
-
-                            tint =
-                                MaterialTheme
-                                    .colorScheme
-                                    .primary
+                        Text(
+                            text = "Lat: $latStr, Lon: $lonStr",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color(0xFF334155)
                         )
                     }
                 }
-
-                Spacer(
-                    Modifier.width(12.dp)
-                )
-
-                Column(
-                    Modifier.weight(1f)
-                ) {
-
-                    Text(
-
-                        "Office location",
-
-                        fontWeight =
-                            FontWeight.SemiBold,
-
-                        fontSize = 16.sp
-                    )
-
-                    Text(
-
-                        if (configured)
-                            "Saved on this device"
-                        else
-                            "Set your current GPS location",
-
-                        color =
-                            MaterialTheme
-                                .colorScheme
-                                .onSurface
-                                .copy(
-                                    alpha = .55f
-                                ),
-
-                        fontSize = 12.sp
-                    )
-                }
-
-                if (configured) {
-
-                    Icon(
-
-                        Icons.Default.CheckCircle,
-
-                        contentDescription =
-                            null,
-
-                        tint =
-                            MaterialTheme
-                                .colorScheme
-                                .secondary
-                    )
-                }
             }
 
-            Spacer(
-                Modifier.height(14.dp)
+            Text(
+                text = "To mark your attendance, ensure your current office location is correctly identified.",
+                fontSize = 12.sp,
+                color = Color(0xFF64748B),
+                lineHeight = 16.sp
             )
 
             OutlinedButton(
-
-                onClick =
-                    onSetLocation,
-
-                enabled =
-                    !loading,
-
-                modifier =
-                    Modifier.fillMaxWidth(),
-
-                shape =
-                    RoundedCornerShape(14.dp)
+                onClick = onSetLocation,
+                enabled = !loading,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp),
+                shape = RoundedCornerShape(8.dp),
+                border = BorderStroke(1.dp, Color(0xFF2563EB))
             ) {
-
                 if (loading) {
-
                     CircularProgressIndicator(
-
-                        modifier =
-                            Modifier.size(18.dp),
-
-                        strokeWidth = 2.dp
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = Color(0xFF2563EB)
                     )
-
                 } else {
-
                     Icon(
-
-                        Icons.Default.MyLocation,
-
-                        contentDescription =
-                            null
+                        imageVector = Icons.Default.AddCircleOutline,
+                        contentDescription = null,
+                        tint = Color(0xFF2563EB),
+                        modifier = Modifier.size(18.dp)
                     )
-
-                    Spacer(
-                        Modifier.width(8.dp)
-                    )
-
+                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
-
-                        if (configured)
-                            "Update Office Location"
-                        else
-                            "Set Office Location"
+                        text = if (configured) "Update Office Location" else "Set Office Location",
+                        color = Color(0xFF2563EB),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
                     )
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun LocationStatusSection(
+    distanceMeters: Float?,
+    withinRadius: Boolean
+) {
+    val displayDistance = distanceMeters?.toInt() ?: 0
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        // Circular distance progress ring
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.size(140.dp)
+        ) {
+            Canvas(modifier = Modifier.size(130.dp)) {
+                // Background Track
+                drawArc(
+                    color = Color(0xFFF1F5F9),
+                    startAngle = 0f,
+                    sweepAngle = 360f,
+                    useCenter = false,
+                    style = Stroke(width = 8.dp.toPx(), cap = StrokeCap.Round)
+                )
+                // Status Segment Arc
+                drawArc(
+                    color = if (withinRadius) Color(0xFF10B981) else Color(0xFFEF4444),
+                    startAngle = 300f,
+                    sweepAngle = 100f,
+                    useCenter = false,
+                    style = Stroke(width = 8.dp.toPx(), cap = StrokeCap.Round)
+                )
+            }
+
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "${displayDistance}m",
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF1E293B)
+                )
+                Text(
+                    text = "AWAY",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF94A3B8),
+                    letterSpacing = 1.sp
+                )
+            }
+        }
+
+        // Dynamic Status Badge
+        Surface(
+            color = if (withinRadius) Color(0xFFD1FAE5) else Color(0xFFFEE2E2),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .background(
+                            if (withinRadius) Color(0xFF10B981) else Color(0xFFEF4444),
+                            CircleShape
+                        )
+                )
+                Text(
+                    text = if (withinRadius) "IN RANGE" else "OUT OF RANGE",
+                    color = if (withinRadius) Color(0xFF047857) else Color(0xFFEF4444),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.5.sp
+                )
+            }
+        }
+
+        Text(
+            text = "Move within 50 meters of the designated office location\nto enable check-in.",
+            fontSize = 11.sp,
+            color = Color(0xFF94A3B8),
+            textAlign = TextAlign.Center,
+            lineHeight = 15.sp
+        )
     }
 }
 
@@ -728,103 +507,61 @@ private fun AttendanceActionCard(
     hasPermission: Boolean,
     onMark: () -> Unit
 ) {
-
-    Card(
-
-        modifier =
-            Modifier.fillMaxWidth(),
-
-        shape =
-            RoundedCornerShape(20.dp),
-
-        colors =
-            CardDefaults.cardColors(
-
-                containerColor =
-                    MaterialTheme
-                        .colorScheme
-                        .surface
-            )
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .drawBehind {
+                val stroke = Stroke(
+                    width = 1.dp.toPx(),
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 8f), 0f)
+                )
+                drawRoundRect(
+                    color = Color(0xFFCBD5E1),
+                    cornerRadius = CornerRadius(16.dp.toPx()),
+                    style = stroke
+                )
+            }
+            .padding(20.dp),
+        contentAlignment = Alignment.Center
     ) {
-
         Column(
-            Modifier.padding(18.dp)
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-
-            Text(
-
-                "Today's attendance",
-
-                fontSize = 16.sp,
-
-                fontWeight =
-                    FontWeight.SemiBold
-            )
-
-            Spacer(
-                Modifier.height(5.dp)
-            )
-
-            Text(
-
-                if (enabled)
-                    "You're eligible to check in."
-                else
-                    "You must be within 50 meters of the office.",
-
-                fontSize = 12.sp,
-
-                color =
-                    MaterialTheme
-                        .colorScheme
-                        .onSurface
-                        .copy(
-                            alpha = .55f
-                        )
-            )
-
-            Spacer(
-                Modifier.height(14.dp)
+            Icon(
+                imageVector = Icons.Default.Lock,
+                contentDescription = null,
+                tint = Color(0xFF94A3B8),
+                modifier = Modifier.size(36.dp)
             )
 
             Button(
-
-                onClick =
-                    onMark,
-
-                enabled =
-                    enabled &&
-                            hasPermission,
-
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(52.dp),
-
-                shape =
-                    RoundedCornerShape(15.dp)
+                onClick = onMark,
+                enabled = enabled && hasPermission,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF2563EB),
+                    disabledContainerColor = Color(0xFFCBD5E1),
+                    disabledContentColor = Color(0xFF64748B)
+                )
             ) {
-
-                Icon(
-
-                    Icons.Default.CheckCircle,
-
-                    contentDescription =
-                        null
-                )
-
-                Spacer(
-                    Modifier.width(8.dp)
-                )
-
                 Text(
-
-                    "Mark Attendance",
-
-                    fontWeight =
-                        FontWeight.SemiBold
+                    text = "Mark Attendance",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
                 )
             }
+
+            Text(
+                text = "AVAILABLE 09:00 AM - 10:30 AM",
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF94A3B8),
+                letterSpacing = 0.5.sp
+            )
         }
     }
 }
@@ -833,43 +570,34 @@ private fun AttendanceActionCard(
 private fun LastAttendanceCard(
     timestamp: Long
 ) {
-
     Surface(
-
-        modifier =
-            Modifier.fillMaxWidth(),
-
-        shape =
-            RoundedCornerShape(16.dp),
-
-        color =
-            MaterialTheme
-                .colorScheme
-                .surfaceVariant
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = Color(0xFFF1F5F9)
     ) {
-
         Row(
-
             Modifier.padding(14.dp),
-
-            verticalAlignment =
-                Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically
         ) {
-
             Icon(
                 Icons.Default.CheckCircle,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.secondary
+                tint = Color(0xFF10B981)
             )
 
             Spacer(Modifier.width(10.dp))
 
             Column {
-                Text("Last attendance", fontSize = 11.sp)
                 Text(
-                    DateFormat.getDateTimeInstance().format(Date(timestamp)),
+                    text = "Last attendance",
+                    fontSize = 11.sp,
+                    color = Color(0xFF64748B)
+                )
+                Text(
+                    text = DateFormat.getDateTimeInstance().format(Date(timestamp)),
                     fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFF1E293B)
                 )
             }
         }
