@@ -1,4 +1,28 @@
-# Advanced Camera & Sync Engine (Flutter)
+# Task 1: Geo-Fenced Attendance System (Native Android)
+A location-aware Android application built with **Jetpack Compose** and **Google Play Services Location API** that allows users to set office GPS coordinates and dynamically enables attendance recording when within a 50-meter geo-fenced radius.
+
+# Deliverables & Links
+-> GitHub Repository: https://github.com/shakil1994/AndroidApp-GeoAttendance
+-> Release APK: https://drive.google.com/drive/folders/1zcZwe1G_xVvmtGPSj9-33vR1zZ4lT8No?usp=sharing
+
+# Project Structure & Architecture
+This application strictly follows modern Android development practices using **MVVM (Model-View-ViewModel)** and unidirectional data flow.
+
+## How to Run
+
+### Prerequisites
+* Android Studio Ladybug (or newer)
+* Android SDK 35 (Minimum SDK 26)
+* A physical device or Android Emulator with active Location/GPS permissions enabled.
+
+### Steps
+1. **Clone the Repository:**
+   git clone https://github.com/shakil1994/AndroidApp-GeoAttendance.git
+
+# Screenshots
+https://drive.google.com/file/d/1kUiavuXrQCnbEUxe1hFZM7tHY40_zCAJ/view?usp=sharing
+
+# Task 2: Advanced Camera & Sync Engine (Flutter)
 A Flutter application featuring a custom hardware camera implementation paired with an offline-first resilient sync engine. The app supports pinch-to-zoom, dynamic lens switching/clamping, tap-to-focus animations, batch image queuing, and persistent background uploads via Workmanager.
 
 # Deliverables & Links
